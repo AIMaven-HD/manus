@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { createClient } from '@/lib/supabase/client';
 import { useSearchParams } from 'next/navigation';
 
 import { Registration } from '@/lib/supabase/database.types';
 
-export default function ScanPage() {
+function ScanContent() {
   const searchParams = useSearchParams();
   const initialQrId = searchParams.get('id');
   const [registration, setRegistration] = useState<Registration | null>(null);
@@ -16,6 +16,27 @@ export default function ScanPage() {
   const [message, setMessage] = useState<string | null>(null);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const supabase = createClient();
+
+  const fetchRegistration = useCallback(async (id: string) => {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const { data, error } = await supabase
+        .from('registrations')
+        .select('*')
+        .eq('qr_id', id)
+        .single();
+
+      if (error) throw error;
+      setRegistration(data);
+    } catch {
+      setError('Registration not found');
+      setRegistration(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
     if (initialQrId) {
@@ -50,27 +71,6 @@ export default function ScanPage() {
       }
     };
   }, [initialQrId, fetchRegistration]);
-
-  const fetchRegistration = useCallback(async (id: string) => {
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-    try {
-      const { data, error } = await supabase
-        .from('registrations')
-        .select('*')
-        .eq('qr_id', id)
-        .single();
-
-      if (error) throw error;
-      setRegistration(data);
-    } catch {
-      setError('Registration not found');
-      setRegistration(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [supabase]);
 
   async function handleAttendance(type: 'drop-off' | 'pick-up') {
     if (!registration) return;
@@ -143,5 +143,13 @@ export default function ScanPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ScanPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading scanner...</div>}>
+      <ScanContent />
+    </Suspense>
   );
 }

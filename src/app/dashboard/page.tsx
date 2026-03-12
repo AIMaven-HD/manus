@@ -55,8 +55,9 @@ export default async function DashboardPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {registrations?.map((reg) => {
-                const latestAttendance = reg.attendance
-                  ?.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+                const latestAttendance = Array.isArray(reg.attendance)
+                  ? [...reg.attendance].sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
+                  : null;
 
                 const status = latestAttendance
                   ? latestAttendance.type === 'drop-off' ? 'Checked In' : 'Checked Out'
@@ -76,7 +77,7 @@ export default async function DashboardPage() {
                       {new Date(reg.start_date).toLocaleDateString()} - {new Date(reg.end_date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-gray-500 text-sm">
-                      {latestAttendance
+                      {latestAttendance && latestAttendance.timestamp
                         ? `${latestAttendance.type} at ${new Date(latestAttendance.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                         : '-'}
                     </td>
