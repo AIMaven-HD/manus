@@ -26,7 +26,17 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push('/dashboard');
+      // Fetch user's role and redirect accordingly
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .single();
+
+      if (profile?.role === 'admin') {
+        router.push('/dashboard');
+      } else {
+        router.push('/scan');
+      }
       router.refresh();
     }
   };

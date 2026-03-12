@@ -1,8 +1,24 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+
+  // Get current user and their profile/role
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  // If not an admin, redirect to scanner
+  if (profile?.role !== 'admin') {
+    redirect('/scan');
+  }
 
   const { data: registrations, error } = await supabase
     .from('registrations')
@@ -56,7 +72,11 @@ export default async function DashboardPage() {
             <tbody className="divide-y divide-gray-100">
               {registrations?.map((reg) => {
                 const latestAttendance = Array.isArray(reg.attendance)
-                  ? [...reg.attendance].sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
+                  ? [...reg.attendance].sort((a, b) => {
+                      const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+                      const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+                      return timeB - timeA;
+                    })[0]
                   : null;
 
                 const status = latestAttendance
